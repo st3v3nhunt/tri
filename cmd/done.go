@@ -18,59 +18,50 @@ package cmd
 import (
 	"fmt"
 	"log"
-	"os"
 	"sort"
-	"text/tabwriter"
+	"strconv"
 
 	"github.com/spf13/cobra"
 	"github.com/st3v3nhunt/tri/todo"
 )
 
-var (
-	doneOpt bool
-	allOpt  bool
-)
-
-// listCmd represents the list command
-var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List the todos",
-	Long:  `Listing the todos`,
-	Run:   listRun,
+// doneCmd represents the done command
+var doneCmd = &cobra.Command{
+	Use:     "done",
+	Aliases: []string{"do"},
+	Short:   "Mark todo as done",
+	Run:     doneRun,
 }
 
-func listRun(cmd *cobra.Command, args []string) {
+func doneRun(cmd *cobra.Command, args []string) {
 	items, err := todo.ReadItems(datafile)
+	i, err := strconv.Atoi(args[0])
 
 	if err != nil {
-		log.Printf("%v", err)
+		log.Fatalln(args[0], "is not a valid label\n", err)
 	}
 
-	sort.Sort(todo.ByPri(items))
+	if i > 0 && i < len(items) {
+		items[i-1].Done = true
+		fmt.Printf("%q %v\n", items[i-1].Text, "marked done")
 
-	w := tabwriter.NewWriter(os.Stdout, 3, 0, 1, ' ', 0)
-	for _, i := range items {
-		if allOpt || i.Done == doneOpt {
-			fmt.Fprintln(w, i.Label()+"\t"+i.PrettyDone()+"\t"+i.PrettyP()+"\t"+i.Text+"\t")
-		}
+		sort.Sort(todo.ByPri(items))
+		todo.SaveItems(datafile, items)
+	} else {
+		log.Println(i, "doesn't match any items")
 	}
-
-	w.Flush()
-	// return s[i].Position < s[j].Position
 }
 
 func init() {
-	rootCmd.AddCommand(listCmd)
+	rootCmd.AddCommand(doneCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// listCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// doneCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// listCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	listCmd.Flags().BoolVar(&doneOpt, "done", false, "Show 'Done' todos ")
-	listCmd.Flags().BoolVar(&allOpt, "all", false, "Show all todos ")
+	// doneCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
